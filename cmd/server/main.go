@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/IgorBrizack/backend-rinha-3/internal/infra/redis"
 	"github.com/IgorBrizack/backend-rinha-3/internal/routes"
 	"github.com/joho/godotenv"
 )
@@ -13,6 +14,10 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Warning: Failed to load .env file.")
+	}
+
+	if err := redis.InitRedis(); err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
 	}
 
 	port := os.Getenv("BACKEND_PORT")
