@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/IgorBrizack/backend-rinha-3/internal/routes"
 	"github.com/joho/godotenv"
 )
 
@@ -19,9 +20,7 @@ func main() {
 		port = "8081"
 	}
 
-	db := database.NewDatabase().DB()
-
-	r := routes.SetupRouter(db)
+	r := routes.SetupRouter()
 
 	fmt.Printf("Running on port %s\n", port)
 	r.Run(":" + port)
