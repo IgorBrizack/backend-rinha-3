@@ -23,21 +23,26 @@ func NewPaymentService() *PaymentService {
 }
 
 func (s *PaymentService) CreatePaymentDefault(payment dto.PaymentRequest) error {
+	return s.sendPayment(s.main_url, payment)
+}
+
+func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequest) error {
+	return s.sendPayment(s.fallback_url, payment)
+}
+
+func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequest) error {
 	payload, err := json.Marshal(payment)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", s.main_url+"/payments", bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", url+"/payments", bytes.NewBuffer(payload))
 	if err != nil {
 		return err
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
+	client := &http.Client{Timeout: 5 * time.Second}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -45,39 +50,42 @@ func (s *PaymentService) CreatePaymentDefault(payment dto.PaymentRequest) error 
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("erro ao criar pagamento: status %d", resp.StatusCode)
 	}
 
 	return nil
 }
 
-func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequest) error {
-	payload, err := json.Marshal(payment)
+func (s *PaymentService) HealthCheckDefault() (dto.PaymentHealthCheckResponse, error) {
+	return s.healthCheck(s.main_url)
+}
+
+func (s *PaymentService) HealthCheckFallback() (dto.PaymentHealthCheckResponse, error) {
+	return s.healthCheck(s.fallback_url)
+}
+
+func (s *PaymentService) healthCheck(url string) (dto.PaymentHealthCheckResponse, error) {
+	client := &http.Client{Timeout: 3 * time.Second}
+	req, err := http.NewRequest("GET", url+"/payments/service-health", nil)
 	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", s.fallback_url+"/payments", bytes.NewBuffer(payload))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{
-		Timeout: 5 * time.Second,
+		return dto.PaymentHealthCheckResponse{}, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return dto.PaymentHealthCheckResponse{Failing: true}, nil // Considera como falha
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("erro ao criar pagamento: status %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		return dto.PaymentHealthCheckResponse{Failing: true}, nil
 	}
 
-	return nil
+	var result dto.PaymentHealthCheckResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return dto.PaymentHealthCheckResponse{}, err
+	}
+
+	return result, nil
 }
