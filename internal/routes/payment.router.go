@@ -1,16 +1,17 @@
 package routes
 
 import (
+	"github.com/IgorBrizack/backend-rinha-3/internal/controller"
+	"github.com/IgorBrizack/backend-rinha-3/internal/services"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func RegisterUserRoutes(r *gin.Engine, db *gorm.DB) {
-	userController := controller.NewController(db)
+func RegisterPaymentRoutes(r *gin.Engine) {
+	paymentService := services.NewPaymentService()
+	paymentController := controller.NewPaymentController(paymentService)
 
-	userGroup := r.Group("/users")
+	paymentGroup := r.Group("/payments")
 	{
-		userGroup.GET("/", userController.GetUsers)
-		userGroup.POST("/", userController.CreateUser)
+		paymentGroup.POST("/", paymentController.CreatePayment)
 	}
 }
