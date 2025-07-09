@@ -51,3 +51,33 @@ func (s *PaymentService) CreatePaymentDefault(payment dto.PaymentRequest) error 
 
 	return nil
 }
+
+func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequest) error {
+	payload, err := json.Marshal(payment)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", s.fallback_url+"/payments", bytes.NewBuffer(payload))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("erro ao criar pagamento: status %d", resp.StatusCode)
+	}
+
+	return nil
+}
