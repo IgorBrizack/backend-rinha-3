@@ -51,6 +51,10 @@ func StartFallbackWorker(client *redis.Client, paymentService *services.PaymentS
 					fmt.Println("Pagamento redirecionado para default_queue")
 				}
 			}
+
+			if err := services.UpdatePaymentSummary(ctx, client, payment, "fallback"); err != nil {
+				fmt.Println("Erro ao atualizar resumo em cache:", err)
+			}
 		}
 	}()
 }

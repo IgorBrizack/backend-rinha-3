@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
-	services "github.com/IgorBrizack/backend-rinha-3/internal/services"
+	"github.com/IgorBrizack/backend-rinha-3/internal/services"
 	"github.com/redis/go-redis/v9"
 )
 
