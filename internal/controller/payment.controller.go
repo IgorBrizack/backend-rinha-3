@@ -2,7 +2,7 @@ package controller
 
 import (
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
-	"github.com/IgorBrizack/backend-rinha-3/internal/services"
+	paymentservice "github.com/IgorBrizack/backend-rinha-3/internal/services"
 	commands "github.com/IgorBrizack/backend-rinha-3/internal/usecases/payment"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -10,12 +10,12 @@ import (
 
 type PaymentController struct {
 	cacheClient    *redis.Client
-	paymentService *services.PaymentService
+	paymentService *paymentservice.PaymentService
 }
 
 func NewPaymentController(
 	cacheClient *redis.Client,
-	paymentService *services.PaymentService,
+	paymentService *paymentservice.PaymentService,
 ) *PaymentController {
 	return &PaymentController{
 		cacheClient:    cacheClient,

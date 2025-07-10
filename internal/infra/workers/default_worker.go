@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
-	"github.com/IgorBrizack/backend-rinha-3/internal/services"
+	services "github.com/IgorBrizack/backend-rinha-3/internal/services"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -49,6 +49,11 @@ func StartDefaultWorker(client *redis.Client, paymentService *services.PaymentSe
 				} else {
 					fmt.Println("Pagamento redirecionado para fallback_queue")
 				}
+				continue
+			}
+
+			if err := services.UpdatePaymentSummary(ctx, client, payment, "default"); err != nil {
+				fmt.Println("Erro ao atualizar resumo em cache:", err)
 			}
 		}
 	}()

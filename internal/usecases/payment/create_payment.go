@@ -6,16 +6,19 @@ import (
 	"fmt"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
-	"github.com/IgorBrizack/backend-rinha-3/internal/services"
+	paymentservice "github.com/IgorBrizack/backend-rinha-3/internal/services"
+
 	"github.com/redis/go-redis/v9"
 )
 
 type CreatePaymentCommand struct {
 	cacheClient    *redis.Client
-	paymentService *services.PaymentService
+	paymentService *paymentservice.PaymentService
 }
 
-func NewCreatePaymentCommand(cacheClient *redis.Client, paymentService *services.PaymentService) *CreatePaymentCommand {
+func NewCreatePaymentCommand(
+	cacheClient *redis.Client,
+	paymentService *paymentservice.PaymentService) *CreatePaymentCommand {
 	return &CreatePaymentCommand{
 		cacheClient:    cacheClient,
 		paymentService: paymentService,
