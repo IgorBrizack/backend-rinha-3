@@ -38,3 +38,15 @@ func (pc *PaymentController) CreatePayment(c *gin.Context) {
 
 	c.JSON(200, gin.H{"message": "Payment created successfully"})
 }
+
+func (pc *PaymentController) GetPaymentSummary(c *gin.Context) {
+	cmd := commands.NewGetPaymentSummaryCommand(pc.cacheClient)
+
+	summary, err := cmd.Execute()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to retrieve payment summary"})
+		return
+	}
+
+	c.JSON(200, summary)
+}
