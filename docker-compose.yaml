@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  backend:
+    build: .
+    environment:
+      - BACKEND_PORT=8100
+    command: ["/main"]
+    ports:
+      - "8100:8100"
+    networks:
+      - meu_pg_mei_network
+    depends_on:
+      - mysql
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: meu_pg_mei_db
+      MYSQL_USER: example_user
+      MYSQL_PASSWORD: example_pass
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "3325:3306"
+    networks:
+      - meu_pg_mei_network
+    command: >
+      --server-id=1
+      --log-bin=mysql-bin
+      --binlog-do-db=example_db
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+networks:
+  meu_pg_mei_network:
+    driver: bridge
