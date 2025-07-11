@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
+	db "github.com/IgorBrizack/backend-rinha-3/internal/infra/database"
 	"github.com/IgorBrizack/backend-rinha-3/internal/infra/redis"
 	"github.com/IgorBrizack/backend-rinha-3/internal/infra/workers"
 	"github.com/IgorBrizack/backend-rinha-3/internal/routes"
@@ -22,11 +24,15 @@ func main() {
 		log.Fatalf("Failed to initialize Redis: %v", err)
 	}
 
+	database := db.NewDatabase()
+	database.DB().AutoMigrate(&payment.Payment{})
+
 	paymentService := services.NewPaymentService()
+	paymentRepository := db.NewPaymentRepository(database.DB())
 
 	// Start workers
-	workers.StartDefaultWorker(redis.GetClient(), paymentService)
-	workers.StartFallbackWorker(redis.GetClient(), paymentService)
+	workers.StartDefaultWorker(paymentRepository, redis.GetClient(), paymentService)
+	workers.StartFallbackWorker(paymentRepository, redis.GetClient(), paymentService)
 
 	port := os.Getenv("BACKEND_PORT")
 	if port == "" {
