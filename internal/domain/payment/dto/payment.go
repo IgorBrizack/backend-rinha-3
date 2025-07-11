@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/google/uuid"
+
 type PaymentProcessorSummary struct {
 	TotalRequests int     `json:"totalRequests"`
 	TotalAmount   float64 `json:"totalAmount"`
@@ -11,8 +13,8 @@ type PaymentSummaryResponse struct {
 }
 
 type PaymentRequest struct {
-	ID     string  `json:"id"`
-	Amount float64 `json:"amount"`
+	CorrelationID uuid.UUID `json:"correlationId"`
+	Amount        float64   `json:"amount"`
 }
 
 type PaymentHealthCheckResponse struct {
