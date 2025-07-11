@@ -3,12 +3,13 @@ package payment
 import (
 	"time"
 
-	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Payment struct {
-	ID            uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	CorrelationID uuid.UUID `gorm:"type:uuid;uniqueIndex;not null"`
-	Amount        float64   `gorm:"type:numeric(10,2);not null"`
-	CreatedAt     time.Time `gorm:"autoCreateTime"`
+	ID            string         `gorm:"type:char(36);primaryKey;default:(UUID())"` // char(36) é usado para UUID em MySQL
+	CorrelationID string         `gorm:"type:char(36);uniqueIndex;not null"`
+	Amount        float64        `gorm:"type:decimal(10,2);not null"`
+	CreatedAt     time.Time      `gorm:"autoCreateTime"`
+	DeletedAt     gorm.DeletedAt `gorm:"index"` // se quiser soft delete
 }
