@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
 	"github.com/IgorBrizack/backend-rinha-3/internal/services"
 	"github.com/redis/go-redis/v9"
 )
 
-func StartDefaultWorker(client *redis.Client, paymentService *services.PaymentService) {
+func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Client, paymentService *services.PaymentService) {
 	queueName := "default_queue"
 
 	go func() {
@@ -28,16 +29,17 @@ func StartDefaultWorker(client *redis.Client, paymentService *services.PaymentSe
 				continue
 			}
 
-			var payment dto.PaymentRequest
-			if err := json.Unmarshal([]byte(result[1]), &payment); err != nil {
+			var req dto.PaymentRequest
+			if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
 				fmt.Println("Erro ao deserializar pagamento:", err)
 				continue
 			}
 
-			if err := paymentService.CreatePaymentDefault(payment); err != nil {
+			// Primeiro, tenta processar com o serviço externo
+			if err := paymentService.CreatePaymentDefault(req); err != nil {
 				fmt.Println("Erro ao processar pagamento default:", err)
 
-				payload, errMarshal := json.Marshal(payment)
+				payload, errMarshal := json.Marshal(req)
 				if errMarshal != nil {
 					fmt.Println("Erro ao serializar pagamento para fallback:", errMarshal)
 					continue
@@ -52,8 +54,14 @@ func StartDefaultWorker(client *redis.Client, paymentService *services.PaymentSe
 				continue
 			}
 
-			if err := services.UpdatePaymentSummary(ctx, client, payment, "default"); err != nil {
-				fmt.Println("Erro ao atualizar resumo em cache:", err)
+			entity := payment.Payment{
+				CorrelationID: req.CorrelationID,
+				Amount:        req.Amount,
+				CreatedAt:     time.Now(),
+			}
+
+			if err := paymentRepository.CreatePayment(entity); err != nil {
+				fmt.Println("Erro ao criar pagamento no banco de dados:", err)
 			}
 		}
 	}()

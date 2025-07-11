@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
 	"github.com/IgorBrizack/backend-rinha-3/internal/services"
 	"github.com/redis/go-redis/v9"
 )
 
-func StartFallbackWorker(client *redis.Client, paymentService *services.PaymentService) {
+func StartFallbackWorker(paymentRepository payment.Repository, client *redis.Client, paymentService *services.PaymentService) {
 	queueName := "fallback_queue"
 
 	go func() {
@@ -28,17 +29,17 @@ func StartFallbackWorker(client *redis.Client, paymentService *services.PaymentS
 				continue
 			}
 
-			var payment dto.PaymentRequest
-			if err := json.Unmarshal([]byte(result[1]), &payment); err != nil {
+			var req dto.PaymentRequest
+			if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
 				fmt.Println("Erro ao deserializar pagamento:", err)
 				continue
 			}
 
 			// Tenta enviar para o serviço fallback
-			if err := paymentService.CreatePaymentFallback(payment); err != nil {
+			if err := paymentService.CreatePaymentFallback(req); err != nil {
 				fmt.Println("Erro ao processar pagamento fallback:", err)
 
-				payload, errMarshal := json.Marshal(payment)
+				payload, errMarshal := json.Marshal(req)
 				if errMarshal != nil {
 					fmt.Println("Erro ao serializar pagamento para default:", errMarshal)
 					continue
@@ -52,9 +53,16 @@ func StartFallbackWorker(client *redis.Client, paymentService *services.PaymentS
 				}
 			}
 
-			if err := services.UpdatePaymentSummary(ctx, client, payment, "fallback"); err != nil {
-				fmt.Println("Erro ao atualizar resumo em cache:", err)
+			entity := payment.Payment{
+				CorrelationID: req.CorrelationID,
+				Amount:        req.Amount,
+				CreatedAt:     time.Now(),
 			}
+
+			if err := paymentRepository.CreatePayment(entity); err != nil {
+				fmt.Println("Erro ao criar pagamento no banco de dados:", err)
+			}
+
 		}
 	}()
 }
