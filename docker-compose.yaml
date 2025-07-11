@@ -11,6 +11,11 @@ services:
     networks:
       - backend
       - payment-processor
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "350MB"
 
   backend1:
     build: ./backend
@@ -24,6 +29,12 @@ services:
       - payment-processor
     depends_on:
       - mysql_db
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "350MB"
+
   backend2:
     build: ./backend
     environment:
@@ -36,6 +47,12 @@ services:
       - payment-processor
     depends_on:
       - mysql_db
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "350MB"
+
   mysql_db:
     image: mysql:8.0
     environment:
@@ -58,6 +75,12 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "350MB"
+
   redis:
     image: redis:latest
     container_name: redis
@@ -68,6 +91,11 @@ services:
       - payment-processor
     restart: always
     command: ["redis-server", "--appendonly", "yes"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: "350MB"
 
 networks:
   backend:
