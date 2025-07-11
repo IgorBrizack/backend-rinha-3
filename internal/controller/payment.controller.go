@@ -9,8 +9,7 @@ import (
 )
 
 type PaymentController struct {
-	cacheClient    *redis.Client
-	paymentService *paymentservice.PaymentService
+	cacheClient *redis.Client
 }
 
 func NewPaymentController(
@@ -18,8 +17,7 @@ func NewPaymentController(
 	paymentService *paymentservice.PaymentService,
 ) *PaymentController {
 	return &PaymentController{
-		cacheClient:    cacheClient,
-		paymentService: paymentService,
+		cacheClient: cacheClient,
 	}
 }
 
@@ -30,7 +28,7 @@ func (pc *PaymentController) CreatePayment(c *gin.Context) {
 		return
 	}
 
-	err := commands.NewCreatePaymentCommand(pc.cacheClient, pc.paymentService).Execute(paymentRequest)
+	err := commands.NewCreatePaymentCommand(pc.cacheClient).Execute(paymentRequest)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to create payment"})
 		return
