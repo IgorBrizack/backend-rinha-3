@@ -54,7 +54,7 @@ func main() {
 	}
 
 	fmt.Printf("[INIT] Iniciando servidor HTTP na porta %s...\n", port)
-	r := routes.SetupRouter()
+	r := routes.SetupRouter(paymentRepository)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("[FATAL] Falha ao iniciar servidor: %v", err)
 	}

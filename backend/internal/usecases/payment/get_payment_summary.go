@@ -1,39 +1,35 @@
 package commands
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
+	"time"
 
+	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
 	"github.com/redis/go-redis/v9"
 )
 
+type PaymentSummaryParams struct {
+	From time.Time `form:"from" json:"from" query:"from"`
+	To   time.Time `form:"to" json:"to" query:"to"`
+}
+
 type GetPaymentSummaryCommand struct {
-	cacheClient *redis.Client
+	cacheClient       *redis.Client
+	paymentRepository payment.Repository
 }
 
 func NewGetPaymentSummaryCommand(
 	cacheClient *redis.Client,
+	paymentRepository payment.Repository,
 ) *GetPaymentSummaryCommand {
 	return &GetPaymentSummaryCommand{
-		cacheClient: cacheClient,
+		cacheClient:       cacheClient,
+		paymentRepository: paymentRepository,
 	}
 }
 
-func (c *GetPaymentSummaryCommand) Execute() (dto.PaymentSummaryResponse, error) {
+func (c *GetPaymentSummaryCommand) Execute(params PaymentSummaryParams) (dto.PaymentSummaryResponse, error) {
 	var summary dto.PaymentSummaryResponse
-
-	val, err := c.cacheClient.Get(context.Background(), "payment_summary").Result()
-	if err == redis.Nil {
-		return summary, nil
-	} else if err != nil {
-		return summary, fmt.Errorf("erro ao acessar cache: %w", err)
-	}
-
-	if err := json.Unmarshal([]byte(val), &summary); err != nil {
-		return summary, fmt.Errorf("erro ao desserializar dados do cache: %w", err)
-	}
 
 	return summary, nil
 }
