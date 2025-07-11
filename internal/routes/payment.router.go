@@ -15,5 +15,6 @@ func RegisterPaymentRoutes(r *gin.Engine) {
 	paymentGroup := r.Group("/payments")
 	{
 		paymentGroup.POST("/", paymentController.CreatePayment)
+		paymentGroup.GET("/summary", paymentController.GetPaymentSummary)
 	}
 }
