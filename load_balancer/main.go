@@ -30,7 +30,7 @@ func lbHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Println("Load Balancer started on :8020")
+	log.Println("Load Balancer started on :9999")
 	http.HandleFunc("/", lbHandler)
-	log.Fatal(http.ListenAndServe("0.0.0.0:8020", nil))
+	log.Fatal(http.ListenAndServe("0.0.0.0:9999", nil))
 }

@@ -10,8 +10,8 @@ import (
 )
 
 type PaymentSummaryParams struct {
-	From time.Time `form:"from" json:"from" query:"from"`
-	To   time.Time `form:"to" json:"to" query:"to"`
+	From *time.Time `form:"from" json:"from" query:"from"`
+	To   *time.Time `form:"to" json:"to" query:"to"`
 }
 
 type GetPaymentSummaryCommand struct {
@@ -42,7 +42,7 @@ func (c *GetPaymentSummaryCommand) Execute(params PaymentSummaryParams) (dto.Pay
 	return result, nil
 }
 
-func (c *GetPaymentSummaryCommand) GetPayments(from, to time.Time) ([]payment.Payment, error) {
+func (c *GetPaymentSummaryCommand) GetPayments(from, to *time.Time) ([]payment.Payment, error) {
 	payments, err := c.paymentRepository.GetPayments(from, to)
 
 	if err != nil {

@@ -1,1 +1,0 @@
-implementar o servicço de conexão com a API externa

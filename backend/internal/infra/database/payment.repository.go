@@ -19,12 +19,19 @@ func (r *paymentRepository) CreatePayment(p payment.Payment) error {
 	return r.db.Create(&p).Error
 }
 
-func (r *paymentRepository) GetPayments(from, to time.Time) ([]payment.Payment, error) {
+func (r *paymentRepository) GetPayments(from, to *time.Time) ([]payment.Payment, error) {
 	var payments []payment.Payment
 
-	err := r.db.
-		Where("created_at BETWEEN ? AND ?", from, to).
-		Find(&payments).Error
+	query := r.db
 
+	if from != nil && to != nil {
+		query = query.Where("created_at BETWEEN ? AND ?", *from, *to)
+	} else if from != nil {
+		query = query.Where("created_at >= ?", *from)
+	} else if to != nil {
+		query = query.Where("created_at <= ?", *to)
+	}
+
+	err := query.Find(&payments).Error
 	return payments, err
 }

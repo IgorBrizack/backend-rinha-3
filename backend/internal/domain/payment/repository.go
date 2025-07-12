@@ -6,5 +6,5 @@ import (
 
 type Repository interface {
 	CreatePayment(payment Payment) error
-	GetPayments(from, to time.Time) ([]Payment, error)
+	GetPayments(from, to *time.Time) ([]Payment, error)
 }
