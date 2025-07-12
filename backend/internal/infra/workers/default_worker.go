@@ -58,7 +58,7 @@ func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Clie
 				CorrelationID: req.CorrelationID,
 				Amount:        req.Amount,
 				Default:       true,
-				CreatedAt:     time.Now(),
+				CreatedAt:     time.Now().UTC(),
 			}
 
 			if err := paymentRepository.CreatePayment(entity); err != nil {
