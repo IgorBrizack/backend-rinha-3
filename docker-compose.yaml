@@ -14,7 +14,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.30"
+          cpus: "0.35"
           memory: "30MB"
 
   backend1:
@@ -32,7 +32,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.20"
           memory: "50MB"
 
   backend2:
@@ -50,7 +50,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.20"
           memory: "50MB"
 
   mysql_db:
@@ -94,7 +94,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.30"
+          cpus: "0.25"
           memory: "20MB"
 
 networks:
