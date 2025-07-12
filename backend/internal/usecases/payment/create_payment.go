@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
 
@@ -23,7 +24,12 @@ func NewCreatePaymentCommand(
 }
 
 func (c *CreatePaymentCommand) Execute(payment dto.PaymentRequest) error {
-	payload, err := json.Marshal(payment)
+
+	payload, err := json.Marshal(dto.PaymentRequestService{
+		CorrelationID: payment.CorrelationID,
+		Amount:        payment.Amount,
+		RequestedAt:   time.Now(),
+	})
 	if err != nil {
 		return fmt.Errorf("erro ao serializar pagamento: %w", err)
 	}

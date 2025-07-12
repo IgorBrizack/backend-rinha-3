@@ -29,7 +29,7 @@ func StartFallbackWorker(paymentRepository payment.Repository, client *redis.Cli
 				continue
 			}
 
-			var req dto.PaymentRequest
+			var req dto.PaymentRequestService
 			if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
 				fmt.Println("Erro ao deserializar pagamento:", err)
 				continue
@@ -56,7 +56,8 @@ func StartFallbackWorker(paymentRepository payment.Repository, client *redis.Cli
 			entity := payment.Payment{
 				CorrelationID: req.CorrelationID,
 				Amount:        req.Amount,
-				CreatedAt:     time.Now(),
+				Default:       false,
+				CreatedAt:     req.RequestedAt,
 			}
 
 			if err := paymentRepository.CreatePayment(entity); err != nil {

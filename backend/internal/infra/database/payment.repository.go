@@ -1,8 +1,9 @@
 package database
 
 import (
+	"time"
+
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
-	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
 	"gorm.io/gorm"
 )
 
@@ -18,6 +19,12 @@ func (r *paymentRepository) CreatePayment(p payment.Payment) error {
 	return r.db.Create(&p).Error
 }
 
-func (r *paymentRepository) GetSummary() error {
-	return r.db.Find(&dto.PaymentSummaryResponse{}).Error
+func (r *paymentRepository) GetPayments(from, to time.Time) ([]payment.Payment, error) {
+	var payments []payment.Payment
+
+	err := r.db.
+		Where("created_at BETWEEN ? AND ?", from, to).
+		Find(&payments).Error
+
+	return payments, err
 }

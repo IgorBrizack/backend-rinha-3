@@ -22,15 +22,15 @@ func NewPaymentService() *PaymentService {
 	}
 }
 
-func (s *PaymentService) CreatePaymentDefault(payment dto.PaymentRequest) error {
+func (s *PaymentService) CreatePaymentDefault(payment dto.PaymentRequestService) error {
 	return s.sendPayment(s.main_url, payment)
 }
 
-func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequest) error {
+func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequestService) error {
 	return s.sendPayment(s.fallback_url, payment)
 }
 
-func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequest) error {
+func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequestService) error {
 	payload, err := json.Marshal(payment)
 	if err != nil {
 		return err

@@ -29,7 +29,7 @@ func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Clie
 				continue
 			}
 
-			var req dto.PaymentRequest
+			var req dto.PaymentRequestService
 			if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
 				fmt.Println("Erro ao deserializar pagamento:", err)
 				continue
@@ -57,6 +57,7 @@ func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Clie
 			entity := payment.Payment{
 				CorrelationID: req.CorrelationID,
 				Amount:        req.Amount,
+				Default:       true,
 				CreatedAt:     time.Now(),
 			}
 

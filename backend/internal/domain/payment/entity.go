@@ -3,13 +3,13 @@ package payment
 import (
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/shopspring/decimal"
 )
 
 type Payment struct {
-	ID            string         `gorm:"type:char(36);primaryKey;default:(UUID())"` // char(36) é usado para UUID em MySQL
-	CorrelationID string         `gorm:"type:char(36);uniqueIndex;not null"`
-	Amount        float64        `gorm:"type:decimal(10,2);not null"`
-	CreatedAt     time.Time      `gorm:"autoCreateTime"`
-	DeletedAt     gorm.DeletedAt `gorm:"index"` // se quiser soft delete
+	ID            string          `gorm:"type:char(36);primaryKey;default:(UUID())"`
+	CorrelationID string          `gorm:"type:char(36);uniqueIndex;not null"`
+	Amount        decimal.Decimal `gorm:"type:decimal(10,2);"`
+	Default       bool            `gorm:"not null"`
+	CreatedAt     time.Time       `gorm:"autoCreateTime"`
 }
