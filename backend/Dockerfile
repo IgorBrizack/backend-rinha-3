@@ -1,20 +1,20 @@
-FROM golang:1.24-alpine AS deps
+# Etapa de build
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
-
-RUN CGO_ENABLED=0 go install github.com/cosmtrek/air@v1.49.0
-
-FROM golang:1.24-alpine AS final
-
-WORKDIR /app
-
-COPY --from=deps /go/bin /go/bin
 
 COPY go.mod go.sum ./
-COPY air.toml ./
-
-RUN go mod tidy
+RUN go mod download
 
 COPY . .
 
-ENTRYPOINT ["air", "-c", "air.toml"]
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o server ./cmd/server
+
+FROM scratch
+
+COPY --from=builder /app/server /server
+
+COPY --from=builder /app/.env /.env
+
+ENTRYPOINT ["/server"]

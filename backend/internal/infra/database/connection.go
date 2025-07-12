@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
@@ -23,24 +24,33 @@ func NewDatabase() *Database {
 		log.Println("Warning: Failed to load .env.")
 	}
 
-	db := &Database{
+	return &Database{
 		dbUser: os.Getenv("MYSQL_USER"),
 		dbPass: os.Getenv("MYSQL_PASSWORD"),
 		dbName: os.Getenv("MYSQL_DATABASE"),
 		dbHost: os.Getenv("DB_HOST"),
 	}
-
-	return db
 }
 
 func (d *Database) DB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open(d.getDbDSN()), &gorm.Config{})
+	var db *gorm.DB
+	var err error
 
-	if err != nil {
-		log.Fatal("Failed to connect to the  database:", err)
+	dsn := d.getDbDSN()
+
+	const maxAttempts = 10
+	for attempts := 1; attempts <= maxAttempts; attempts++ {
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err == nil {
+			return db
+		}
+
+		log.Printf("⚠️ Tentativa %d/%d: Falha ao conectar no banco: %v", attempts, maxAttempts, err)
+		time.Sleep(6 * time.Second)
 	}
 
-	return db
+	log.Fatalf("❌ Não foi possível conectar ao banco de dados após %d tentativas: %v", maxAttempts, err)
+	return nil
 }
 
 func (d *Database) getDbDSN() string {
