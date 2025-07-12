@@ -49,6 +49,10 @@ func main() {
 	fmt.Println("[OK] Worker default iniciado")
 	workers.StartFallbackWorker(paymentRepository, redis.GetClient(), paymentService)
 	fmt.Println("[OK] Worker fallback iniciado")
+	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
+		go workers.NewHealthCheckerWorker(paymentService, redis.GetClient()).Start()
+		fmt.Println("[OK] Worker health checker iniciado")
+	}
 
 	port := os.Getenv("BACKEND_PORT")
 	if port == "" {

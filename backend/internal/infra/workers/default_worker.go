@@ -15,7 +15,7 @@ import (
 
 func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Client, paymentService *services.PaymentService) {
 	queueName := "default_queue"
-	const numWorkers = 5
+	const numWorkers = 3
 
 	var wg sync.WaitGroup
 
@@ -29,7 +29,6 @@ func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Clie
 			for {
 				result, err := client.BLPop(ctx, 0*time.Second, queueName).Result()
 				if err != nil {
-					fmt.Printf("[Worker %d] Erro lendo da fila default: %v\n", workerID, err)
 					continue
 				}
 
@@ -39,25 +38,18 @@ func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Clie
 
 				var req dto.PaymentRequestService
 				if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
-					fmt.Printf("[Worker %d] Erro ao deserializar pagamento: %v\n", workerID, err)
+					continue
+				}
+
+				mainHealth, fallbackHealth := getHealthStatus(ctx, client)
+
+				if mainHealth.Failing || mainHealth.MinResponseTime > int(float64(fallbackHealth.MinResponseTime)*1.2) {
+					redirectToFallback(ctx, client, workerID, req)
 					continue
 				}
 
 				if err := paymentService.CreatePaymentDefault(req); err != nil {
-					fmt.Printf("[Worker %d] Erro ao processar pagamento default: %v\n", workerID, err)
-
-					payload, errMarshal := json.Marshal(req)
-					if errMarshal != nil {
-						fmt.Printf("[Worker %d] Erro ao serializar fallback: %v\n", workerID, errMarshal)
-						continue
-					}
-
-					errPush := client.RPush(ctx, "fallback_queue", payload).Err()
-					if errPush != nil {
-						fmt.Printf("[Worker %d] Erro ao empurrar para fallback_queue: %v\n", workerID, errPush)
-					} else {
-						fmt.Printf("[Worker %d] Pagamento redirecionado para fallback_queue\n", workerID)
-					}
+					redirectToFallback(ctx, client, workerID, req)
 					continue
 				}
 

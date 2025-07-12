@@ -15,7 +15,7 @@ import (
 
 func StartFallbackWorker(paymentRepository payment.Repository, client *redis.Client, paymentService *services.PaymentService) {
 	queueName := "fallback_queue"
-	const numWorkers = 5
+	const numWorkers = 2
 
 	var wg sync.WaitGroup
 
@@ -29,7 +29,6 @@ func StartFallbackWorker(paymentRepository payment.Repository, client *redis.Cli
 			for {
 				result, err := client.BLPop(ctx, 0*time.Second, queueName).Result()
 				if err != nil {
-					fmt.Printf("[FallbackWorker %d] Erro lendo da fila: %v\n", workerID, err)
 					continue
 				}
 
@@ -39,25 +38,17 @@ func StartFallbackWorker(paymentRepository payment.Repository, client *redis.Cli
 
 				var req dto.PaymentRequestService
 				if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
-					fmt.Printf("[FallbackWorker %d] Erro ao deserializar pagamento: %v\n", workerID, err)
+					continue
+				}
+
+				mainStatus, fallbackStatus := getHealthStatus(ctx, client)
+				if fallbackStatus.Failing || (mainStatus.MinResponseTime > 0 && fallbackStatus.MinResponseTime > int(float64(mainStatus.MinResponseTime)*1.2)) {
+					redirectToQueue(ctx, client, "default_queue", workerID, req)
 					continue
 				}
 
 				if err := paymentService.CreatePaymentFallback(req); err != nil {
-					fmt.Printf("[FallbackWorker %d] Erro ao processar pagamento fallback: %v\n", workerID, err)
-
-					payload, errMarshal := json.Marshal(req)
-					if errMarshal != nil {
-						fmt.Printf("[FallbackWorker %d] Erro ao serializar para default_queue: %v\n", workerID, errMarshal)
-						continue
-					}
-
-					errPush := client.RPush(ctx, "default_queue", payload).Err()
-					if errPush != nil {
-						fmt.Printf("[FallbackWorker %d] Erro ao reempurrar para default_queue: %v\n", workerID, errPush)
-					} else {
-						fmt.Printf("[FallbackWorker %d] Pagamento redirecionado para default_queue\n", workerID)
-					}
+					redirectToQueue(ctx, client, "default_queue", workerID, req)
 					continue
 				}
 
@@ -65,7 +56,7 @@ func StartFallbackWorker(paymentRepository payment.Repository, client *redis.Cli
 					CorrelationID: req.CorrelationID,
 					Amount:        req.Amount,
 					Default:       false,
-					CreatedAt:     req.RequestedAt.UTC(), // garante que é UTC
+					CreatedAt:     req.RequestedAt.UTC(),
 				}
 
 				if err := paymentRepository.CreatePayment(entity); err != nil {
