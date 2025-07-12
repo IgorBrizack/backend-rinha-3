@@ -31,10 +31,13 @@ func main() {
 
 	fmt.Println("[INIT] Conectando ao banco de dados...")
 	database := db.NewDatabase()
-	if err := database.DB().AutoMigrate(&payment.Payment{}); err != nil {
-		log.Fatalf("[FATAL] Falha ao migrar modelo Payment: %v", err)
+	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
+		fmt.Println("[OK] Banco de dados migrado com sucesso")
+		if err := database.DB().AutoMigrate(&payment.Payment{}); err != nil {
+			log.Fatalf("[FATAL] Falha ao migrar modelo Payment: %v", err)
+		}
 	}
-	fmt.Println("[OK] Banco de dados conectado e migrado")
+	fmt.Println("[OK] Banco de dados conectado")
 
 	fmt.Println("[INIT] Inicializando repositórios e serviços...")
 	paymentRepository := db.NewPaymentRepository(database.DB())

@@ -28,7 +28,7 @@ func (c *CreatePaymentCommand) Execute(payment dto.PaymentRequest) error {
 	payload, err := json.Marshal(dto.PaymentRequestService{
 		CorrelationID: payment.CorrelationID,
 		Amount:        payment.Amount,
-		RequestedAt:   time.Now(),
+		RequestedAt:   time.Now().UTC(),
 	})
 	if err != nil {
 		return fmt.Errorf("erro ao serializar pagamento: %w", err)

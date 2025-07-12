@@ -42,7 +42,7 @@ func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequestServi
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := &http.Client{Timeout: 10 * time.Second}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -66,7 +66,7 @@ func (s *PaymentService) HealthCheckFallback() (dto.PaymentHealthCheckResponse, 
 }
 
 func (s *PaymentService) healthCheck(url string) (dto.PaymentHealthCheckResponse, error) {
-	client := &http.Client{Timeout: 3 * time.Second}
+	client := &http.Client{Timeout: 10 * time.Second}
 	req, err := http.NewRequest("GET", url+"/payments/service-health", nil)
 	if err != nil {
 		return dto.PaymentHealthCheckResponse{}, err

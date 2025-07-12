@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
@@ -14,56 +15,63 @@ import (
 
 func StartDefaultWorker(paymentRepository payment.Repository, client *redis.Client, paymentService *services.PaymentService) {
 	queueName := "default_queue"
+	const numWorkers = 5
 
-	go func() {
-		ctx := context.Background()
+	var wg sync.WaitGroup
 
-		for {
-			result, err := client.BLPop(ctx, 0*time.Second, queueName).Result()
-			if err != nil {
-				fmt.Println("Erro lendo da fila default:", err)
-				continue
-			}
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
 
-			if len(result) < 2 {
-				continue
-			}
+		go func(workerID int) {
+			defer wg.Done()
+			ctx := context.Background()
 
-			var req dto.PaymentRequestService
-			if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
-				fmt.Println("Erro ao deserializar pagamento:", err)
-				continue
-			}
-
-			// Primeiro, tenta processar com o serviço externo
-			if err := paymentService.CreatePaymentDefault(req); err != nil {
-				fmt.Println("Erro ao processar pagamento default:", err)
-
-				payload, errMarshal := json.Marshal(req)
-				if errMarshal != nil {
-					fmt.Println("Erro ao serializar pagamento para fallback:", errMarshal)
+			for {
+				result, err := client.BLPop(ctx, 0*time.Second, queueName).Result()
+				if err != nil {
+					fmt.Printf("[Worker %d] Erro lendo da fila default: %v\n", workerID, err)
 					continue
 				}
 
-				errPush := client.RPush(ctx, "fallback_queue", payload).Err()
-				if errPush != nil {
-					fmt.Println("Erro ao empurrar pagamento para fallback_queue:", errPush)
-				} else {
-					fmt.Println("Pagamento redirecionado para fallback_queue")
+				if len(result) < 2 {
+					continue
 				}
-				continue
-			}
 
-			entity := payment.Payment{
-				CorrelationID: req.CorrelationID,
-				Amount:        req.Amount,
-				Default:       true,
-				CreatedAt:     time.Now(),
-			}
+				var req dto.PaymentRequestService
+				if err := json.Unmarshal([]byte(result[1]), &req); err != nil {
+					fmt.Printf("[Worker %d] Erro ao deserializar pagamento: %v\n", workerID, err)
+					continue
+				}
 
-			if err := paymentRepository.CreatePayment(entity); err != nil {
-				fmt.Println("Erro ao criar pagamento no banco de dados:", err)
+				if err := paymentService.CreatePaymentDefault(req); err != nil {
+					fmt.Printf("[Worker %d] Erro ao processar pagamento default: %v\n", workerID, err)
+
+					payload, errMarshal := json.Marshal(req)
+					if errMarshal != nil {
+						fmt.Printf("[Worker %d] Erro ao serializar fallback: %v\n", workerID, errMarshal)
+						continue
+					}
+
+					errPush := client.RPush(ctx, "fallback_queue", payload).Err()
+					if errPush != nil {
+						fmt.Printf("[Worker %d] Erro ao empurrar para fallback_queue: %v\n", workerID, errPush)
+					} else {
+						fmt.Printf("[Worker %d] Pagamento redirecionado para fallback_queue\n", workerID)
+					}
+					continue
+				}
+
+				entity := payment.Payment{
+					CorrelationID: req.CorrelationID,
+					Amount:        req.Amount,
+					Default:       true,
+					CreatedAt:     time.Now().UTC(),
+				}
+
+				if err := paymentRepository.CreatePayment(entity); err != nil {
+					fmt.Printf("[Worker %d] Erro ao salvar no banco: %v\n", workerID, err)
+				}
 			}
-		}
-	}()
+		}(i)
+	}
 }
