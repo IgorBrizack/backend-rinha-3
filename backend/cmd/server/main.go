@@ -5,8 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
-	db "github.com/IgorBrizack/backend-rinha-3/internal/infra/database"
+	"github.com/IgorBrizack/backend-rinha-3/internal/infra/database"
 	"github.com/IgorBrizack/backend-rinha-3/internal/infra/redis"
 	"github.com/IgorBrizack/backend-rinha-3/internal/infra/workers"
 	"github.com/IgorBrizack/backend-rinha-3/internal/routes"
@@ -29,26 +28,11 @@ func main() {
 	}
 	fmt.Println("[OK] Redis inicializado com sucesso")
 
-	fmt.Println("[INIT] Conectando ao banco de dados...")
-	database := db.NewDatabase()
-	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
-		fmt.Println("[OK] Banco de dados migrado com sucesso")
-		if err := database.DB().AutoMigrate(&payment.Payment{}); err != nil {
-			log.Fatalf("[FATAL] Falha ao migrar modelo Payment: %v", err)
-		}
-	}
-	fmt.Println("[OK] Banco de dados conectado")
-
 	fmt.Println("[INIT] Inicializando repositórios e serviços...")
-	paymentRepository := db.NewPaymentRepository(database.DB())
+	paymentRepository := database.NewPaymentRepository(redis.GetClient())
 	paymentService := services.NewPaymentService()
 	fmt.Println("[OK] Repositórios e serviços prontos")
 
-	fmt.Println("[INIT] Iniciando workers...")
-	workers.StartDefaultWorker(redis.GetClient(), paymentService)
-	fmt.Println("[OK] Worker default iniciado")
-	workers.StartFallbackWorker(redis.GetClient(), paymentService)
-	fmt.Println("[OK] Worker fallback iniciado")
 	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
 		go workers.NewHealthCheckerWorker(paymentService, redis.GetClient()).Start()
 		fmt.Println("[OK] Worker health checker iniciado")
@@ -65,4 +49,12 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("[FATAL] Falha ao iniciar servidor: %v", err)
 	}
+}
+
+func startWorkers(paymentService *services.PaymentService) {
+	fmt.Println("[INIT] Iniciando workers...")
+	workers.StartDefaultWorker(redis.GetClient(), paymentService)
+	fmt.Println("[OK] Worker default iniciado")
+	workers.StartFallbackWorker(redis.GetClient(), paymentService)
+	fmt.Println("[OK] Worker fallback iniciado")
 }
