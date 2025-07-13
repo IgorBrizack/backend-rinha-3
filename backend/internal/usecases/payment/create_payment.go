@@ -33,7 +33,7 @@ func (c *CreatePaymentCommand) Execute(ctx context.Context, payment dto.PaymentR
 	timeUTC := time.Now().UTC()
 	queue := c.selectQueueToSend(ctx)
 
-	if err := c.saveInDB(ctx, payment, timeUTC); err != nil {
+	if err := c.saveInDB(ctx, payment, timeUTC, queue); err != nil {
 		fmt.Print("Erro ao salvar no banco")
 		return err
 	}
@@ -63,17 +63,23 @@ func (c *CreatePaymentCommand) selectQueueToSend(ctx context.Context) string {
 	return qdefault
 }
 
-func (c *CreatePaymentCommand) saveInDB(ctx context.Context, paymentRequestData dto.PaymentRequest, timeUTC time.Time) error {
+func (c *CreatePaymentCommand) saveInDB(ctx context.Context, paymentRequestData dto.PaymentRequest, timeUTC time.Time, queue string) error {
+
+	var isDefault bool
+	if queue == "default_queue" {
+		isDefault = true
+	}
 
 	entity := payment.Payment{
 		CorrelationID: paymentRequestData.CorrelationID,
 		Amount:        paymentRequestData.Amount,
-		Default:       false,
+		Default:       isDefault,
 		CreatedAt:     timeUTC,
 	}
 
 	if err := c.paymentRepository.CreatePayment(ctx, entity); err != nil {
 		fmt.Printf("Erro ao salvar no banco: %v\n", err)
+		return err
 	}
 	return nil
 }

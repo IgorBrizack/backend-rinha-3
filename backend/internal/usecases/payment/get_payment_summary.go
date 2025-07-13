@@ -64,9 +64,10 @@ func (c *GetPaymentSummaryCommand) calculate(payments []payment.Payment) dto.Pay
 		if p.Default {
 			totalDefault = totalDefault.Add(p.Amount)
 			totalDefaultReq++
+		} else {
+			totalFallback = totalFallback.Add(p.Amount)
+			totalFallbackReq++
 		}
-		totalFallback = totalFallback.Add(p.Amount)
-		totalFallbackReq++
 	}
 
 	defaultAmount, _ := totalDefault.Float64()

@@ -13,7 +13,7 @@ import (
 
 func StartDefaultWorker(client *redis.Client, paymentService *services.PaymentService) {
 	queueName := "default_queue"
-	const numWorkers = 4
+	const numWorkers = 10
 
 	var wg sync.WaitGroup
 

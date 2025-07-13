@@ -13,7 +13,7 @@ import (
 
 func StartFallbackWorker(client *redis.Client, paymentService *services.PaymentService) {
 	queueName := "fallback_queue"
-	const numWorkers = 4
+	const numWorkers = 10
 
 	var wg sync.WaitGroup
 

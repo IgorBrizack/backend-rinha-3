@@ -20,15 +20,36 @@ func NewPaymentRepository(redisClient *redis.Client) payment.Repository {
 	}
 }
 
+func (r *paymentRepository) ExistsByCorrelationID(ctx context.Context, correlationID string) (bool, error) {
+	key := "correlation:" + correlationID
+	exists, err := r.redisClient.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return exists == 1, nil
+}
+
 func (r *paymentRepository) CreatePayment(ctx context.Context, p payment.Payment) error {
+	correlationKey := "correlation:" + p.CorrelationID
+	exists, err := r.redisClient.Exists(ctx, correlationKey).Result()
+	if err != nil {
+		return err
+	}
+	if exists == 1 {
+		return fmt.Errorf("pagamento com correlationID %s já existe", p.CorrelationID)
+	}
+
 	data, err := json.Marshal(p)
 	if err != nil {
 		return err
 	}
 
 	key := "payment:" + p.ID
-
 	if err := r.redisClient.Set(ctx, key, data, 0).Err(); err != nil {
+		return err
+	}
+
+	if err := r.redisClient.Set(ctx, correlationKey, p.ID, 0).Err(); err != nil {
 		return err
 	}
 
