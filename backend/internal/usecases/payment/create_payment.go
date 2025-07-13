@@ -56,7 +56,7 @@ func (c *CreatePaymentCommand) selectQueueToSend(ctx context.Context) string {
 		return qdefault
 	}
 
-	if mainHealth.Failing || mainHealth.MinResponseTime > int(float64(fallbackHealth.MinResponseTime)*2) {
+	if mainHealth.Failing || mainHealth.MinResponseTime > int(float64(fallbackHealth.MinResponseTime)*1.2) {
 		return qfallback
 	}
 

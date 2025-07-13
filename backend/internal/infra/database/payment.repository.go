@@ -28,75 +28,57 @@ func (r *paymentRepository) ExistsByCorrelationID(ctx context.Context, correlati
 	}
 	return exists == 1, nil
 }
-
 func (r *paymentRepository) CreatePayment(ctx context.Context, p payment.Payment) error {
-	correlationKey := "correlation:" + p.CorrelationID
-	exists, err := r.redisClient.Exists(ctx, correlationKey).Result()
+	payload, err := json.Marshal(p)
 	if err != nil {
-		return err
-	}
-	if exists == 1 {
-		return fmt.Errorf("pagamento com correlationID %s já existe", p.CorrelationID)
+		return fmt.Errorf("failed to marshal payment: %w", err)
 	}
 
-	data, err := json.Marshal(p)
-	if err != nil {
-		return err
+	if err := r.redisClient.LPush(ctx, "payment_queue", payload).Err(); err != nil {
+		return fmt.Errorf("failed to push to redis list: %w", err)
 	}
 
-	key := "payment:" + p.ID
-	if err := r.redisClient.Set(ctx, key, data, 0).Err(); err != nil {
-		return err
-	}
-
-	if err := r.redisClient.Set(ctx, correlationKey, p.ID, 0).Err(); err != nil {
-		return err
-	}
-
-	score := float64(p.CreatedAt.Unix())
-	if err := r.redisClient.ZAdd(ctx, "payments_index", redis.Z{
-		Score:  score,
-		Member: key,
+	if err := r.redisClient.ZAdd(ctx, "payment_index", redis.Z{
+		Score:  float64(p.CreatedAt.Unix()),
+		Member: payload,
 	}).Err(); err != nil {
-		return err
+		return fmt.Errorf("failed to index payment in sorted set: %w", err)
 	}
 
 	return nil
 }
 
 func (r *paymentRepository) GetPayments(ctx context.Context, from, to *time.Time) ([]payment.Payment, error) {
-	var start, end string
+	var min, max string
+
 	if from != nil {
-		start = fmt.Sprintf("%d", from.Unix())
+		min = fmt.Sprintf("%d", from.Unix())
 	} else {
-		start = "-inf"
-	}
-	if to != nil {
-		end = fmt.Sprintf("%d", to.Unix())
-	} else {
-		end = "+inf"
+		min = "-inf"
 	}
 
-	ids, err := r.redisClient.ZRangeByScore(ctx, "payments_index", &redis.ZRangeBy{
-		Min: start,
-		Max: end,
+	if to != nil {
+		max = fmt.Sprintf("%d", to.Unix())
+	} else {
+		max = "+inf"
+	}
+
+	result, err := r.redisClient.ZRangeByScore(ctx, "payment_index", &redis.ZRangeBy{
+		Min: min,
+		Max: max,
 	}).Result()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query redis sorted set: %w", err)
 	}
 
-	var result []payment.Payment
-	for _, key := range ids {
-		data, err := r.redisClient.Get(ctx, key).Bytes()
-		if err != nil {
-			continue
-		}
+	payments := make([]payment.Payment, 0, len(result))
+	for _, item := range result {
 		var p payment.Payment
-		if err := json.Unmarshal(data, &p); err != nil {
+		if err := json.Unmarshal([]byte(item), &p); err != nil {
 			continue
 		}
-		result = append(result, p)
+		payments = append(payments, p)
 	}
 
-	return result, nil
+	return payments, nil
 }
