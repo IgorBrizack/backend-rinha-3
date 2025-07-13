@@ -68,7 +68,7 @@ func (r *paymentRepository) GetPayments(ctx context.Context, from, to *time.Time
 	for _, key := range ids {
 		data, err := r.redisClient.Get(ctx, key).Bytes()
 		if err != nil {
-			continue // skip not found
+			continue
 		}
 		var p payment.Payment
 		if err := json.Unmarshal(data, &p); err != nil {
