@@ -24,13 +24,14 @@ func NewPaymentController(
 }
 
 func (pc *PaymentController) CreatePayment(c *gin.Context) {
+	ctx := c.Request.Context()
 	var paymentRequest dto.PaymentRequest
 	if err := c.ShouldBindJSON(&paymentRequest); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request payload"})
 		return
 	}
 
-	err := commands.NewCreatePaymentCommand(pc.cacheClient).Execute(paymentRequest)
+	err := commands.NewCreatePaymentCommand(pc.cacheClient, pc.paymentRepository).Execute(ctx, paymentRequest)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to create payment"})
 		return
