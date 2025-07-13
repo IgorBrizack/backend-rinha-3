@@ -33,6 +33,12 @@ func main() {
 	paymentService := services.NewPaymentService()
 	fmt.Println("[OK] Repositórios e serviços prontos")
 
+	fmt.Println("[INIT] Iniciando workers...")
+	workers.StartDefaultWorker(redis.GetClient(), paymentService)
+	fmt.Println("[OK] Worker default iniciado")
+	workers.StartFallbackWorker(redis.GetClient(), paymentService)
+	fmt.Println("[OK] Worker fallback iniciado")
+
 	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
 		go workers.NewHealthCheckerWorker(paymentService, redis.GetClient()).Start()
 		fmt.Println("[OK] Worker health checker iniciado")
@@ -49,12 +55,4 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("[FATAL] Falha ao iniciar servidor: %v", err)
 	}
-}
-
-func startWorkers(paymentService *services.PaymentService) {
-	fmt.Println("[INIT] Iniciando workers...")
-	workers.StartDefaultWorker(redis.GetClient(), paymentService)
-	fmt.Println("[OK] Worker default iniciado")
-	workers.StartFallbackWorker(redis.GetClient(), paymentService)
-	fmt.Println("[OK] Worker fallback iniciado")
 }
