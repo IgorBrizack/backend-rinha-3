@@ -34,10 +34,8 @@ func main() {
 	fmt.Println("[OK] Repositórios e serviços prontos")
 
 	fmt.Println("[INIT] Iniciando workers...")
-	workers.StartDefaultWorker(redis.GetClient(), paymentService)
+	workers.PaymentWorker(redis.GetClient(), paymentService, paymentRepository)
 	fmt.Println("[OK] Worker default iniciado")
-	workers.StartFallbackWorker(redis.GetClient(), paymentService)
-	fmt.Println("[OK] Worker fallback iniciado")
 
 	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
 		go workers.NewHealthCheckerWorker(paymentService, redis.GetClient()).Start()
