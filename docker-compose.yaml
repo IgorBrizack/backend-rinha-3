@@ -33,7 +33,7 @@ services:
       resources:
         limits:
           cpus: "0.20"
-          memory: "50MB"
+          memory: "30MB"
 
   backend2:
     build: ./backend
@@ -51,7 +51,7 @@ services:
       resources:
         limits:
           cpus: "0.20"
-          memory: "50MB"
+          memory: "30MB"
 
   mysql_db:
     image: mysql:8.0
@@ -81,7 +81,7 @@ services:
       resources:
         limits:
           cpus: "0.50"
-          memory: "200MB"
+          memory: "240MB"
 
   redis:
     image: redis:latest
