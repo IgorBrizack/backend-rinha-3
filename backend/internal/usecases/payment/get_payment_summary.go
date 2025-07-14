@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"time"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
@@ -29,10 +30,10 @@ func NewGetPaymentSummaryCommand(
 	}
 }
 
-func (c *GetPaymentSummaryCommand) Execute(params PaymentSummaryParams) (dto.PaymentSummaryResponse, error) {
+func (c *GetPaymentSummaryCommand) Execute(ctx context.Context, params PaymentSummaryParams) (dto.PaymentSummaryResponse, error) {
 	var summary dto.PaymentSummaryResponse
 
-	payments, err := c.GetPayments(params.From, params.To)
+	payments, err := c.GetPayments(ctx, params.From, params.To)
 	if err != nil {
 		return summary, err
 	}
@@ -42,8 +43,8 @@ func (c *GetPaymentSummaryCommand) Execute(params PaymentSummaryParams) (dto.Pay
 	return result, nil
 }
 
-func (c *GetPaymentSummaryCommand) GetPayments(from, to *time.Time) ([]payment.Payment, error) {
-	payments, err := c.paymentRepository.GetPayments(from, to)
+func (c *GetPaymentSummaryCommand) GetPayments(ctx context.Context, from, to *time.Time) ([]payment.Payment, error) {
+	payments, err := c.paymentRepository.GetPayments(ctx, from, to)
 
 	if err != nil {
 		return nil, err
@@ -63,9 +64,10 @@ func (c *GetPaymentSummaryCommand) calculate(payments []payment.Payment) dto.Pay
 		if p.Default {
 			totalDefault = totalDefault.Add(p.Amount)
 			totalDefaultReq++
+		} else {
+			totalFallback = totalFallback.Add(p.Amount)
+			totalFallbackReq++
 		}
-		totalFallback = totalFallback.Add(p.Amount)
-		totalFallbackReq++
 	}
 
 	defaultAmount, _ := totalDefault.Float64()

@@ -41,6 +41,7 @@ func (pc *PaymentController) CreatePayment(c *gin.Context) {
 }
 
 func (pc *PaymentController) GetPaymentSummary(c *gin.Context) {
+	ctx := c.Request.Context()
 	var params commands.PaymentSummaryParams
 
 	if err := c.BindQuery(&params); err != nil {
@@ -50,7 +51,7 @@ func (pc *PaymentController) GetPaymentSummary(c *gin.Context) {
 
 	cmd := commands.NewGetPaymentSummaryCommand(pc.cacheClient, pc.paymentRepository)
 
-	summary, err := cmd.Execute(params)
+	summary, err := cmd.Execute(ctx, params)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to retrieve payment summary"})
 		return
