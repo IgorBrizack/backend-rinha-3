@@ -59,3 +59,15 @@ func (pc *PaymentController) GetPaymentSummary(c *gin.Context) {
 
 	c.JSON(200, summary)
 }
+
+func (pc *PaymentController) PurgePayments(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	err := commands.NewPurgePaymentsCommand(pc.cacheClient).Execute(ctx)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to purge payments"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Payments purged successfully"})
+}

@@ -18,5 +18,7 @@ func SetupRouter(paymentRepository payment.Repository) *gin.Engine {
 
 	router.GET("/payments-summary", paymentController.GetPaymentSummary)
 
+	router.DELETE("/payments", paymentController.PurgePayments)
+
 	return router
 }
