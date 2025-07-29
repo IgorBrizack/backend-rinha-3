@@ -1,16 +1,18 @@
 version: "3.9"
 
 services:
-  load_balancer:
-    build: ./load_balancer
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     ports:
-      - "9999:9999"
+      - "9999:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - backend1
       - backend2
     networks:
       - backend
-      - payment-processor
     deploy:
       resources:
         limits:

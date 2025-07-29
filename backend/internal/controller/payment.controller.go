@@ -11,15 +11,18 @@ import (
 type PaymentController struct {
 	cacheClient       *redis.Client
 	paymentRepository payment.Repository
+	paymentQueue      chan []byte
 }
 
 func NewPaymentController(
 	cacheClient *redis.Client,
 	paymentRepository payment.Repository,
+	paymentQueue chan []byte,
 ) *PaymentController {
 	return &PaymentController{
 		cacheClient:       cacheClient,
 		paymentRepository: paymentRepository,
+		paymentQueue:      paymentQueue,
 	}
 }
 
@@ -31,7 +34,7 @@ func (pc *PaymentController) CreatePayment(c *gin.Context) {
 		return
 	}
 
-	err := commands.NewCreatePaymentCommand(pc.cacheClient, pc.paymentRepository).Execute(ctx, paymentRequest)
+	err := commands.NewCreatePaymentCommand(pc.paymentRepository, pc.paymentQueue).Execute(ctx, paymentRequest)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to create payment"})
 		return
