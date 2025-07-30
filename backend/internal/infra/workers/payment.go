@@ -12,7 +12,7 @@ import (
 )
 
 func PaymentWorker(client *redis.Client, paymentService *services.PaymentService, paymentRepository payment.Repository, paymentQueue chan []byte) {
-	const numWorkers = 20
+	const numWorkers = 40
 	var wg sync.WaitGroup
 
 	for i := 0; i < numWorkers; i++ {
@@ -33,7 +33,7 @@ func PaymentWorker(client *redis.Client, paymentService *services.PaymentService
 					continue
 				}
 
-				mainHealth, fallbackHealth := GetHealthStatus(ctx, client)
+				mainHealth, _ := GetHealthStatus(ctx, client)
 
 				entity := payment.Payment{
 					CorrelationID: req.CorrelationID,
@@ -42,25 +42,24 @@ func PaymentWorker(client *redis.Client, paymentService *services.PaymentService
 					CreatedAt:     req.RequestedAt,
 				}
 
-				if mainHealth.Failing || float64(mainHealth.MinResponseTime) > float64(fallbackHealth.MinResponseTime)*1.2 {
-					if err := paymentService.CreatePaymentFallback(req); err != nil {
-						continue
-					}
+				if mainHealth.Failing {
+					paymentService.CreatePaymentFallback(req)
 					entity.Default = false
 					_ = paymentRepository.CreatePayment(ctx, entity)
 					continue
 				}
 
-				if fallbackHealth.Failing {
-					continue
-				} else {
-					if err := paymentService.CreatePaymentDefault(req); err != nil {
-						continue
-					}
-					entity.Default = true
+				if mainHealth.MinResponseTime > 1000 {
+					paymentService.CreatePaymentFallback(req)
+					entity.Default = false
 					_ = paymentRepository.CreatePayment(ctx, entity)
 					continue
 				}
+
+				paymentService.CreatePaymentDefault(req)
+				entity.Default = true
+				_ = paymentRepository.CreatePayment(ctx, entity)
+				continue
 
 			}
 		}(i)

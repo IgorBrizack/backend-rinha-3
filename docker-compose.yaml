@@ -16,7 +16,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.40"
+          cpus: "0.30"
           memory: "30MB"
 
   backend1:
@@ -35,7 +35,7 @@ services:
       resources:
         limits:
           cpus: "0.30"
-          memory: "30MB"
+          memory: "70MB"
 
   backend2:
     build: ./backend
@@ -53,7 +53,25 @@ services:
       resources:
         limits:
           cpus: "0.30"
-          memory: "30MB"
+          memory: "70MB"
+
+  backend3:
+    build: ./backend
+    environment:
+      - BACKEND_PORT=8023
+    command: ["/main"]
+    expose:
+      - "8023"
+    networks:
+      - backend
+      - payment-processor
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          cpus: "0.30"
+          memory: "70MB"
 
   redis:
     image: redis:latest
@@ -68,8 +86,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.50"
-          memory: "260MB"
+          cpus: "0.30"
+          memory: "100MB"
 
 networks:
   backend:
