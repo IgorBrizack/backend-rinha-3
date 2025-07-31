@@ -28,13 +28,15 @@ func main() {
 	}
 	fmt.Println("[OK] Redis inicializado com sucesso")
 
+	paymentQueue := make(chan []byte, 50000)
+
 	fmt.Println("[INIT] Inicializando repositórios e serviços...")
 	paymentRepository := database.NewPaymentRepository(redis.GetClient())
 	paymentService := services.NewPaymentService()
 	fmt.Println("[OK] Repositórios e serviços prontos")
 
 	fmt.Println("[INIT] Iniciando workers...")
-	workers.PaymentWorker(redis.GetClient(), paymentService, paymentRepository)
+	workers.PaymentWorker(redis.GetClient(), paymentService, paymentRepository, paymentQueue)
 	fmt.Println("[OK] Worker default iniciado")
 
 	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
@@ -49,7 +51,8 @@ func main() {
 	}
 
 	fmt.Printf("[INIT] Iniciando servidor HTTP na porta %s...\n", port)
-	r := routes.SetupRouter(paymentRepository)
+
+	r := routes.SetupRouter(paymentRepository, paymentQueue)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("[FATAL] Falha ao iniciar servidor: %v", err)
 	}

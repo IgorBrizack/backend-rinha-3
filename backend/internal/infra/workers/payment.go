@@ -3,9 +3,7 @@ package workers
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"sync"
-	"time"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
@@ -13,11 +11,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func PaymentWorker(client *redis.Client, paymentService *services.PaymentService, paymentRepository payment.Repository) {
-	const numWorkers = 10
-
-	const pendingQueueName = "pending_payments"
-	port := os.Getenv("BACKEND_PORT")
+func PaymentWorker(client *redis.Client, paymentService *services.PaymentService, paymentRepository payment.Repository, paymentQueue chan []byte) {
+	const numWorkers = 40
 	var wg sync.WaitGroup
 
 	for i := 0; i < numWorkers; i++ {
@@ -28,23 +23,17 @@ func PaymentWorker(client *redis.Client, paymentService *services.PaymentService
 			ctx := context.Background()
 
 			for {
-				result, err := client.BLPop(ctx, 0*time.Second, pendingQueueName+port).Result()
-				if err != nil {
-					continue
+				payload, ok := <-paymentQueue
+				if !ok {
+					break // Canal fechado, encerra worker
 				}
-
-				if len(result) < 2 {
-					continue
-				}
-
-				payload := result[1]
 
 				var req dto.PaymentRequestService
 				if err := json.Unmarshal([]byte(payload), &req); err != nil {
 					continue
 				}
 
-				mainHealth, fallbackHealth := GetHealthStatus(ctx, client)
+				mainHealth, _ := GetHealthStatus(ctx, client)
 
 				entity := payment.Payment{
 					CorrelationID: req.CorrelationID,
@@ -53,19 +42,25 @@ func PaymentWorker(client *redis.Client, paymentService *services.PaymentService
 					CreatedAt:     req.RequestedAt,
 				}
 
-				if mainHealth.Failing || float64(mainHealth.MinResponseTime) > float64(fallbackHealth.MinResponseTime)*1.2 {
-					if err := paymentService.CreatePaymentFallback(req); err != nil {
-						continue
-					}
+				if mainHealth.Failing {
+					paymentService.CreatePaymentFallback(req)
 					entity.Default = false
-				} else {
-					if err := paymentService.CreatePaymentDefault(req); err != nil {
-						continue
-					}
-					entity.Default = true
+					_ = paymentRepository.CreatePayment(ctx, entity)
+					continue
 				}
 
+				if mainHealth.MinResponseTime > 1000 {
+					paymentService.CreatePaymentFallback(req)
+					entity.Default = false
+					_ = paymentRepository.CreatePayment(ctx, entity)
+					continue
+				}
+
+				paymentService.CreatePaymentDefault(req)
+				entity.Default = true
 				_ = paymentRepository.CreatePayment(ctx, entity)
+				continue
+
 			}
 		}(i)
 	}

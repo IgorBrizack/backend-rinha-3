@@ -3,7 +3,6 @@ package services
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -33,7 +32,7 @@ func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequestService
 func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequestService) error {
 	payload, err := json.Marshal(payment)
 	if err != nil {
-		return err
+		return err // ou log do erro
 	}
 
 	req, err := http.NewRequest("POST", url+"/payments", bytes.NewBuffer(payload))
@@ -42,16 +41,14 @@ func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequestServi
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("erro ao criar pagamento: status %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusCreated {
+		return err
 	}
 
 	return nil
@@ -66,7 +63,7 @@ func (s *PaymentService) HealthCheckFallback() (dto.PaymentHealthCheckResponse, 
 }
 
 func (s *PaymentService) healthCheck(url string) (dto.PaymentHealthCheckResponse, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 1 * time.Second}
 	req, err := http.NewRequest("GET", url+"/payments/service-health", nil)
 	if err != nil {
 		return dto.PaymentHealthCheckResponse{}, err

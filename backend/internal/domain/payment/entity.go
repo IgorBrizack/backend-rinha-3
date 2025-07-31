@@ -9,6 +9,7 @@ import (
 type Payment struct {
 	CorrelationID string          `gorm:"type:char(36);uniqueIndex;not null"`
 	Amount        decimal.Decimal `gorm:"type:decimal(10,2);"`
+	Status        string          `gorm:"not null"`
 	Default       bool            `gorm:"not null"`
 	CreatedAt     time.Time       `gorm:"autoCreateTime"`
 }

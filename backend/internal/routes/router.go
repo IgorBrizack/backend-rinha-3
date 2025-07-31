@@ -7,12 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(paymentRepository payment.Repository) *gin.Engine {
+func SetupRouter(paymentRepository payment.Repository, paymentQueue chan []byte) *gin.Engine {
 	router := gin.Default()
 
 	redisInfraClient := redisInfra.GetClient()
 
-	paymentController := controller.NewPaymentController(redisInfraClient, paymentRepository)
+	paymentController := controller.NewPaymentController(redisInfraClient, paymentRepository, paymentQueue)
 
 	router.POST("/payments", paymentController.CreatePayment)
 
