@@ -61,6 +61,10 @@ func (c *GetPaymentSummaryCommand) calculate(payments []payment.Payment) dto.Pay
 	totalFallbackReq := 0
 
 	for _, p := range payments {
+		if p.Status == "PENDING" {
+			continue
+		}
+
 		if p.Default {
 			totalDefault = totalDefault.Add(p.Amount)
 			totalDefaultReq++
