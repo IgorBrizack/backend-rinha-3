@@ -3,7 +3,6 @@ package services
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"net/http"
 	"time"
 
@@ -22,36 +21,33 @@ func NewPaymentService() *PaymentService {
 	}
 }
 
-func (s *PaymentService) CreatePaymentDefault(payment dto.PaymentRequestService) {
-	s.sendPayment(s.main_url, payment)
+func (s *PaymentService) CreatePaymentDefault(payment dto.PaymentRequestService) bool {
+	return s.sendPayment(s.main_url, payment)
 }
 
-func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequestService) {
-	s.sendPayment(s.fallback_url, payment)
+func (s *PaymentService) CreatePaymentFallback(payment dto.PaymentRequestService) bool {
+	return s.sendPayment(s.fallback_url, payment)
 }
 
-func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequestService) {
+func (s *PaymentService) sendPayment(url string, payment dto.PaymentRequestService) bool {
 	payload, err := json.Marshal(payment)
 	if err != nil {
-		return // ou log do erro
+		return false
 	}
 
 	req, err := http.NewRequest("POST", url+"/payments", bytes.NewBuffer(payload))
 	if err != nil {
-		return
+		return false
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	go func() {
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
 
-		// consome o corpo da resposta para permitir reuso da conexão
-		_, _ = io.Copy(io.Discard, resp.Body)
-	}()
+	return resp.StatusCode == http.StatusOK
 }
 
 func (s *PaymentService) HealthCheckDefault() (dto.PaymentHealthCheckResponse, error) {
