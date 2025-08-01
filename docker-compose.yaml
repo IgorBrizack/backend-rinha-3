@@ -17,7 +17,7 @@ services:
       resources:
         limits:
           cpus: "0.30"
-          memory: "30MB"
+          memory: "50MB"
 
   backend1:
     build: ./backend
@@ -34,7 +34,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.50"
+          cpus: "0.40"
           memory: "110MB"
 
   backend2:
@@ -52,7 +52,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.50"
+          cpus: "0.40"
           memory: "110MB"
 
   redis:
