@@ -12,7 +12,7 @@ import (
 )
 
 func PaymentWorker(client *redis.Client, paymentService *services.PaymentService, paymentRepository payment.Repository, paymentQueue chan []byte) {
-	const numWorkers = 40
+	const numWorkers = 5
 	var wg sync.WaitGroup
 
 	for i := 0; i < numWorkers; i++ {
