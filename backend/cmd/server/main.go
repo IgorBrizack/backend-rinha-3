@@ -22,26 +22,27 @@ func main() {
 		fmt.Println("[OK] Variáveis de ambiente carregadas")
 	}
 
-	fmt.Println("[INIT] Inicializando Redis...")
 	if err := redis.InitRedis(); err != nil {
 		log.Fatalf("[FATAL] Falha ao inicializar Redis: %v", err)
 	}
-	fmt.Println("[OK] Redis inicializado com sucesso")
 
 	paymentQueue := make(chan []byte, 50000)
+	defaultQueue := make(chan []byte, 50000)
+	fallbackQueue := make(chan []byte, 50000)
 
-	fmt.Println("[INIT] Inicializando repositórios e serviços...")
 	paymentRepository := database.NewPaymentRepository(redis.GetClient())
 	paymentService := services.NewPaymentService()
-	fmt.Println("[OK] Repositórios e serviços prontos")
 
-	fmt.Println("[INIT] Iniciando workers...")
-	workers.PaymentWorker(redis.GetClient(), paymentService, paymentRepository, paymentQueue)
-	fmt.Println("[OK] Worker default iniciado")
+	workers.NewPaymentWorker(
+		redis.GetClient(),
+		paymentService,
+		paymentRepository,
+		paymentQueue,
+		defaultQueue,
+		fallbackQueue).Start()
 
 	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
 		go workers.NewHealthCheckerWorker(paymentService, redis.GetClient()).Start()
-		fmt.Println("[OK] Worker health checker iniciado")
 	}
 
 	port := os.Getenv("BACKEND_PORT")
