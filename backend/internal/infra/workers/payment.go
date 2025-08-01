@@ -3,7 +3,6 @@ package workers
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"sync"
 	"time"
 
@@ -13,60 +12,106 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func PaymentWorker(client *redis.Client, paymentService *services.PaymentService, paymentRepository payment.Repository) {
-	const numWorkers = 10
+type PaymentWorker struct {
+	client            *redis.Client
+	paymentService    *services.PaymentService
+	paymentRepository payment.Repository
+	paymentQueue      chan []byte
+	defaultQueue      chan []byte
+	fallbackQueue     chan []byte
+}
 
-	const pendingQueueName = "pending_payments"
-	port := os.Getenv("BACKEND_PORT")
+func NewPaymentWorker(
+	client *redis.Client,
+	paymentService *services.PaymentService,
+	paymentRepository payment.Repository,
+	paymentQueue chan []byte,
+	defaultQueue chan []byte,
+	fallbackQueue chan []byte,
+) *PaymentWorker {
+	return &PaymentWorker{
+		client:            client,
+		paymentService:    paymentService,
+		paymentRepository: paymentRepository,
+		paymentQueue:      paymentQueue,
+		defaultQueue:      defaultQueue,
+		fallbackQueue:     fallbackQueue,
+	}
+}
+
+func (w *PaymentWorker) Start() {
+	go w.MainWorker()
+	go w.startWorker(w.defaultQueue, true, w.paymentService.CreatePaymentDefault)
+	go w.startWorker(w.fallbackQueue, false, w.paymentService.CreatePaymentFallback)
+}
+
+func (w *PaymentWorker) MainWorker() {
+	const numWorkers = 5
 	var wg sync.WaitGroup
 
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-
-		go func(workerID int) {
+		go func() {
 			defer wg.Done()
 			ctx := context.Background()
 
-			for {
-				result, err := client.BLPop(ctx, 0*time.Second, pendingQueueName+port).Result()
-				if err != nil {
-					continue
-				}
-
-				if len(result) < 2 {
-					continue
-				}
-
-				payload := result[1]
-
+			for payload := range w.paymentQueue {
 				var req dto.PaymentRequestService
-				if err := json.Unmarshal([]byte(payload), &req); err != nil {
+				if err := json.Unmarshal(payload, &req); err != nil {
 					continue
 				}
 
-				mainHealth, fallbackHealth := GetHealthStatus(ctx, client)
+				mainHealth, fallbackHealth := GetHealthStatus(ctx, w.client)
+
+				switch {
+				case mainHealth.Failing:
+					w.fallbackQueue <- payload
+				case fallbackHealth.Failing:
+					w.paymentQueue <- payload
+				default:
+					w.defaultQueue <- payload
+				}
+			}
+		}()
+	}
+}
+
+func (w *PaymentWorker) startWorker(
+	queue chan []byte,
+	isDefault bool,
+	createFn func(dto.PaymentRequestService) bool,
+) {
+	const numWorkers = 5
+	const maxRetries = 5
+	var wg sync.WaitGroup
+
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ctx := context.Background()
+
+			for payload := range queue {
+				var req dto.PaymentRequestService
+				if err := json.Unmarshal(payload, &req); err != nil {
+					continue
+				}
 
 				entity := payment.Payment{
 					CorrelationID: req.CorrelationID,
 					Amount:        req.Amount,
-					Default:       true,
+					Default:       isDefault,
 					CreatedAt:     req.RequestedAt,
 				}
 
-				if mainHealth.Failing || float64(mainHealth.MinResponseTime) > float64(fallbackHealth.MinResponseTime)*1.2 {
-					if err := paymentService.CreatePaymentFallback(req); err != nil {
-						continue
+				for i := 0; i < maxRetries; i++ {
+					if createFn(req) {
+						_ = w.paymentRepository.CreatePayment(ctx, entity)
+						break
 					}
-					entity.Default = false
-				} else {
-					if err := paymentService.CreatePaymentDefault(req); err != nil {
-						continue
-					}
-					entity.Default = true
+					time.Sleep(50 * time.Millisecond)
 				}
-
-				_ = paymentRepository.CreatePayment(ctx, entity)
 			}
-		}(i)
+		}()
 	}
 }
