@@ -6,7 +6,6 @@ import (
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
-	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 )
 
@@ -16,16 +15,13 @@ type PaymentSummaryParams struct {
 }
 
 type GetPaymentSummaryCommand struct {
-	cacheClient       *redis.Client
 	paymentRepository payment.Repository
 }
 
 func NewGetPaymentSummaryCommand(
-	cacheClient *redis.Client,
 	paymentRepository payment.Repository,
 ) *GetPaymentSummaryCommand {
 	return &GetPaymentSummaryCommand{
-		cacheClient:       cacheClient,
 		paymentRepository: paymentRepository,
 	}
 }

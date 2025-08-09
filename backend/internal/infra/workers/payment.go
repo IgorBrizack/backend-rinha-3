@@ -4,16 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
-	"time"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
 	"github.com/IgorBrizack/backend-rinha-3/internal/services"
-	"github.com/redis/go-redis/v9"
 )
 
 type PaymentWorker struct {
-	client            *redis.Client
 	paymentService    *services.PaymentService
 	paymentRepository payment.Repository
 	paymentQueue      chan []byte
@@ -22,7 +19,6 @@ type PaymentWorker struct {
 }
 
 func NewPaymentWorker(
-	client *redis.Client,
 	paymentService *services.PaymentService,
 	paymentRepository payment.Repository,
 	paymentQueue chan []byte,
@@ -30,7 +26,6 @@ func NewPaymentWorker(
 	fallbackQueue chan []byte,
 ) *PaymentWorker {
 	return &PaymentWorker{
-		client:            client,
 		paymentService:    paymentService,
 		paymentRepository: paymentRepository,
 		paymentQueue:      paymentQueue,
@@ -53,7 +48,6 @@ func (w *PaymentWorker) MainWorker() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ctx := context.Background()
 
 			for payload := range w.paymentQueue {
 				var req dto.PaymentRequestService
@@ -61,16 +55,8 @@ func (w *PaymentWorker) MainWorker() {
 					continue
 				}
 
-				mainHealth, fallbackHealth := GetHealthStatus(ctx, w.client)
+				w.defaultQueue <- payload
 
-				switch {
-				case mainHealth.Failing:
-					w.fallbackQueue <- payload
-				case fallbackHealth.Failing:
-					w.paymentQueue <- payload
-				default:
-					w.defaultQueue <- payload
-				}
 			}
 		}()
 	}
@@ -108,8 +94,13 @@ func (w *PaymentWorker) startWorker(
 					if createFn(req) {
 						_ = w.paymentRepository.CreatePayment(ctx, entity)
 						break
+					} else {
+						if isDefault {
+							w.fallbackQueue <- payload
+						} else {
+							w.defaultQueue <- payload
+						}
 					}
-					time.Sleep(50 * time.Millisecond)
 				}
 			}
 		}()

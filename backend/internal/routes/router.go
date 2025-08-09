@@ -3,16 +3,13 @@ package routes
 import (
 	"github.com/IgorBrizack/backend-rinha-3/internal/controller"
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
-	redisInfra "github.com/IgorBrizack/backend-rinha-3/internal/infra/redis"
 	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter(paymentRepository payment.Repository, paymentQueue chan []byte) *gin.Engine {
 	router := gin.Default()
 
-	redisInfraClient := redisInfra.GetClient()
-
-	paymentController := controller.NewPaymentController(redisInfraClient, paymentRepository, paymentQueue)
+	paymentController := controller.NewPaymentController(paymentRepository, paymentQueue)
 
 	router.POST("/payments", paymentController.CreatePayment)
 

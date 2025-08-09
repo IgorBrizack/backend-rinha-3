@@ -3,19 +3,19 @@ package commands
 import (
 	"context"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 )
 
 type PurgePaymentsCommand struct {
-	cacheClient *redis.Client
+	repo payment.Repository
 }
 
-func NewPurgePaymentsCommand(cacheClient *redis.Client) *PurgePaymentsCommand {
+func NewPurgePaymentsCommand(repo payment.Repository) *PurgePaymentsCommand {
 	return &PurgePaymentsCommand{
-		cacheClient: cacheClient,
+		repo: repo,
 	}
 }
 
 func (c *PurgePaymentsCommand) Execute(ctx context.Context) error {
-	return c.cacheClient.FlushDB(ctx).Err()
+	return c.repo.PurgePayments(ctx)
 }

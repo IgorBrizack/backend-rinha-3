@@ -5,22 +5,18 @@ import (
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment/dto"
 	commands "github.com/IgorBrizack/backend-rinha-3/internal/usecases/payment"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 )
 
 type PaymentController struct {
-	cacheClient       *redis.Client
 	paymentRepository payment.Repository
 	paymentQueue      chan []byte
 }
 
 func NewPaymentController(
-	cacheClient *redis.Client,
 	paymentRepository payment.Repository,
 	paymentQueue chan []byte,
 ) *PaymentController {
 	return &PaymentController{
-		cacheClient:       cacheClient,
 		paymentRepository: paymentRepository,
 		paymentQueue:      paymentQueue,
 	}
@@ -52,7 +48,7 @@ func (pc *PaymentController) GetPaymentSummary(c *gin.Context) {
 		return
 	}
 
-	cmd := commands.NewGetPaymentSummaryCommand(pc.cacheClient, pc.paymentRepository)
+	cmd := commands.NewGetPaymentSummaryCommand(pc.paymentRepository)
 
 	summary, err := cmd.Execute(ctx, params)
 	if err != nil {
@@ -66,7 +62,7 @@ func (pc *PaymentController) GetPaymentSummary(c *gin.Context) {
 func (pc *PaymentController) PurgePayments(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	err := commands.NewPurgePaymentsCommand(pc.cacheClient).Execute(ctx)
+	err := commands.NewPurgePaymentsCommand(pc.paymentRepository).Execute(ctx)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to purge payments"})
 		return

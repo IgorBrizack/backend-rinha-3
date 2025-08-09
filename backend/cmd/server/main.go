@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/IgorBrizack/backend-rinha-3/internal/infra/database"
-	"github.com/IgorBrizack/backend-rinha-3/internal/infra/redis"
 	"github.com/IgorBrizack/backend-rinha-3/internal/infra/workers"
 	"github.com/IgorBrizack/backend-rinha-3/internal/routes"
 	"github.com/IgorBrizack/backend-rinha-3/internal/services"
@@ -22,28 +21,27 @@ func main() {
 		fmt.Println("[OK] Variáveis de ambiente carregadas")
 	}
 
-	if err := redis.InitRedis(); err != nil {
-		log.Fatalf("[FATAL] Falha ao inicializar Redis: %v", err)
+	conn, err := database.NewDatabaseConnection(
+		"postgres", "5432", "postgres", "postgres", "app_db",
+	)
+	if err != nil {
+		log.Fatalf("[FATAL] Falha ao conectar ao banco de dados: %v", err)
 	}
+	defer database.Close(conn)
 
 	paymentQueue := make(chan []byte, 50000)
 	defaultQueue := make(chan []byte, 50000)
 	fallbackQueue := make(chan []byte, 50000)
 
-	paymentRepository := database.NewPaymentRepository(redis.GetClient())
+	paymentRepository := database.NewPaymentRepository(conn)
 	paymentService := services.NewPaymentService()
 
 	workers.NewPaymentWorker(
-		redis.GetClient(),
 		paymentService,
 		paymentRepository,
 		paymentQueue,
 		defaultQueue,
 		fallbackQueue).Start()
-
-	if port := os.Getenv("BACKEND_PORT"); port == "8021" {
-		go workers.NewHealthCheckerWorker(paymentService, redis.GetClient()).Start()
-	}
 
 	port := os.Getenv("BACKEND_PORT")
 	if port == "" {
