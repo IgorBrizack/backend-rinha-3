@@ -30,12 +30,12 @@ services:
       - backend
       - payment-processor
     depends_on:
-      - redis
+      - postgres
     deploy:
       resources:
         limits:
           cpus: "0.40"
-          memory: "110MB"
+          memory: "50MB"
 
   backend2:
     build: ./backend
@@ -48,28 +48,42 @@ services:
       - backend
       - payment-processor
     depends_on:
-      - redis
+      - postgres
     deploy:
       resources:
         limits:
           cpus: "0.40"
-          memory: "110MB"
+          memory: "50MB"
 
-  redis:
-    image: redis:latest
-    container_name: redis
+  postgres:
+    image: postgres:16
+    container_name: postgres
     ports:
-      - "6379:6379"
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app_db
     networks:
       - backend
       - payment-processor
     restart: always
-    command: ["redis-server", "--appendonly", "yes"]
     deploy:
       resources:
         limits:
           cpus: "0.40"
-          memory: "80MB"
+          memory: "200MB"
+    command: [
+      "postgres",
+      "-c", "shared_buffers=64MB",
+      "-c", "work_mem=4MB",
+      "-c", "maintenance_work_mem=16MB",
+      "-c", "max_connections=500",
+      "-c", "synchronous_commit=off",
+      "-c", "fsync=off",
+      "-c", "full_page_writes=off",
+      "-c", "wal_buffers=4MB"
+    ]
 
 networks:
   backend:
