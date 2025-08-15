@@ -7,6 +7,7 @@ import (
 	"github.com/IgorBrizack/backend-rinha-3/internal/domain/payment"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func NewDatabaseConnection(host, port, user, password, dbname string) (*gorm.DB, error) {
@@ -15,9 +16,12 @@ func NewDatabaseConnection(host, port, user, password, dbname string) (*gorm.DB,
 
 	var db *gorm.DB
 	var err error
+	newLogger := logger.Default.LogMode(logger.Info)
 
 	for i := 0; i < 10; i++ {
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+			Logger: newLogger,
+		})
 		if err == nil {
 			sqlDB, _ := db.DB()
 			if pingErr := sqlDB.Ping(); pingErr == nil {

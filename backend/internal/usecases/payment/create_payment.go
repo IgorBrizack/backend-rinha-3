@@ -30,10 +30,7 @@ func (c *CreatePaymentCommand) Execute(ctx context.Context, payment dto.PaymentR
 
 	timeUTC := time.Now().UTC()
 
-	if err := c.sandToWorkerQueue(payment, timeUTC); err != nil {
-		fmt.Print("Erro ao enviar para worker")
-		return err
-	}
+	go c.sandToWorkerQueue(payment, timeUTC)
 
 	return nil
 }

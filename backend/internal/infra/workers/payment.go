@@ -11,11 +11,12 @@ import (
 )
 
 type PaymentWorker struct {
-	paymentService    *services.PaymentService
-	paymentRepository payment.Repository
-	paymentQueue      chan []byte
-	defaultQueue      chan []byte
-	fallbackQueue     chan []byte
+	paymentService     *services.PaymentService
+	paymentRepository  payment.Repository
+	paymentQueue       chan []byte
+	defaultQueue       chan []byte
+	fallbackQueue      chan []byte
+	paymentsBatchQueue chan payment.Payment
 }
 
 func NewPaymentWorker(
@@ -26,11 +27,12 @@ func NewPaymentWorker(
 	fallbackQueue chan []byte,
 ) *PaymentWorker {
 	return &PaymentWorker{
-		paymentService:    paymentService,
-		paymentRepository: paymentRepository,
-		paymentQueue:      paymentQueue,
-		defaultQueue:      defaultQueue,
-		fallbackQueue:     fallbackQueue,
+		paymentService:     paymentService,
+		paymentRepository:  paymentRepository,
+		paymentQueue:       paymentQueue,
+		defaultQueue:       defaultQueue,
+		fallbackQueue:      fallbackQueue,
+		paymentsBatchQueue: make(chan payment.Payment, 1000),
 	}
 }
 
@@ -38,6 +40,7 @@ func (w *PaymentWorker) Start() {
 	go w.MainWorker()
 	go w.startWorker(w.defaultQueue, true, w.paymentService.CreatePaymentDefault)
 	go w.startWorker(w.fallbackQueue, false, w.paymentService.CreatePaymentFallback)
+
 }
 
 func (w *PaymentWorker) MainWorker() {

@@ -7,7 +7,7 @@ import (
 )
 
 type Payment struct {
-	CorrelationID string          `gorm:"type:char(36);uniqueIndex;not null"`
+	CorrelationID string          `gorm:"type:char(36);not null"`
 	Amount        decimal.Decimal `gorm:"type:decimal(10,2);"`
 	Default       bool            `gorm:"not null"`
 	CreatedAt     time.Time       `gorm:"autoCreateTime"`
